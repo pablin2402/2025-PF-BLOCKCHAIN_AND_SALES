@@ -55,7 +55,7 @@ const getOrderPay = async (req, res) => {
     const allPaymentsRaw = await OrderPay.aggregate(pipeline) 
     await Order.populate(allPaymentsRaw, [
       { path: "id_client" } ,
-      { path: "sales_id", model: "SalesMan" },  // Se agrega model para asegurar el populate de sales_id
+      { path: "sales_id", model: "SalesMan" },  
       { path: "orderId" } 
 
     ]);
@@ -290,9 +290,123 @@ const postOrderPay = async (req, res) => {
   }
 };
 
+const getOrderPayByCalendar = async (req, res) => {
+  try {
+    const page = req.body.page || 1;
+    const limit = req.body.limit || 0;
+    let filter = { id_owner: String(req.body.id_owner) };
+    const pipeline = [];
+
+    if (typeof req.body.month === "number" && typeof req.body.year === "number") {
+      const { month, year } = req.body;
+      const adjustedMonth = month - 1;
+
+      const startDate = new Date(year, adjustedMonth, 1, 0, 0, 0, 0);
+      const endDate = new Date(year, adjustedMonth + 1, 0, 23, 59, 59, 999);
+
+      let endUTC4 = new Date(endDate.getTime() - 4 * 60 * 60 * 1000);
+      endUTC4.setDate(endUTC4.getDate() + 1);
+
+      pipeline.push(
+        {
+          $addFields: {
+            creationDateLocal: {
+              $dateSubtract: {
+                startDate: "$creationDate",
+                unit: "hour",
+                amount: 4,
+              },
+            },
+          },
+        },
+        {
+          $match: {
+            creationDateLocal: {
+              $gte: startDate,
+              $lte: endUTC4,
+            },
+          },
+        }
+      );
+    } else {
+      pipeline.push({ $match: filter });
+    }
+    if (req.body.status) {
+      filter.paymentStatus = req.body.status;
+    }
+    if (req.body.id_client) {
+      filter.id_client = req.body.id_client;
+    }
+
+    const allPaymentsRaw = await OrderPay.aggregate(pipeline);
+    await Order.populate(allPaymentsRaw, [
+      { path: "id_client" },
+      { path: "sales_id", model: "SalesMan" },
+      { path: "orderId" },
+    ]);
+    
+    let filteredPayments = allPaymentsRaw;
+    if (req.body.clientName) {
+      const clientNameLower = req.body.clientName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+
+      filteredPayments = allPaymentsRaw.filter((p) => {
+        const name = (p.id_client?.name || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+
+        const lastName = (p.id_client?.lastName || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase();
+
+        return name.includes(clientNameLower) || lastName.includes(clientNameLower);
+      });
+    }
+
+    const totalRecords = filteredPayments.length;
+    const totalPages = limit > 0 ? Math.ceil(totalRecords / limit) : 1;
+    const paginatedPayments =
+      limit > 0 ? filteredPayments.slice((page - 1) * limit, page * limit) : filteredPayments;
+
+    const orderIds = paginatedPayments.map((p) => p.orderId?._id).filter(Boolean);
+    const allPayments = await OrderPay.find({ orderId: { $in: orderIds } }).lean();
+
+    const paymentsWithDebt = paginatedPayments.map((payment) => {
+      const orderTotal = payment.orderId?.totalAmount || 0;
+      const totalPaid = allPayments
+        .filter((p) => p.orderId?.toString() === payment.orderId?._id.toString())
+        .reduce((sum, p) => sum + (p.total || 0), 0);
+      const debt = orderTotal - totalPaid;
+      return {
+        ...payment,
+        totalPaid,
+        debt: debt > 0 ? debt : 0,
+      };
+    });
+
+    res.json({
+      data: paymentsWithDebt,
+      pagination: {
+        totalRecords,
+        totalPages,
+        currentPage: page,
+        limit,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Error al obtener pagos" });
+  }
+};
+
 module.exports = {
     getOrderPay,
     postOrderPay,
     getOrderPayId,
-    getOrderPayBySales
+    getOrderPayBySales,
+    getOrderPayByCalendar
 };

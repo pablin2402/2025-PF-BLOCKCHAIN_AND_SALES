@@ -144,6 +144,7 @@ const getClients = async (req, res) => {
       clients: paginatedClients,
       totalPages: limit > 0 ? Math.ceil(clientList.length / limit) : 1,
       currentPage: page,
+      totalItems: clientList.length
     });
   } catch (error) {
     res.status(500).json({ message: "Error al obtener clientes", error });
@@ -231,7 +232,7 @@ const postClient = (req, res) => {
       icon: req.body.icon, 
       directionId: "",
       number: req.body.number, 
-      identityNumber: 12,
+      identityNumber: req.body.identityNumber,
       company: req.body.company,
       email: req.body.email,
       socialNetwork: req.body.socialNetwork,

@@ -17,9 +17,6 @@ const automatizationController = require("../controllers/AutomatizationControlle
 
 
 router
-
-
-
 .post("/automatization",authenticateToken,automatizationController.getAutomatization)
 .post("/automatization/new", authenticateToken,automatizationController.postAutomatization)
 .post("/automatization/list", authenticateToken,automatizationController.postAutomatizationList)
@@ -51,6 +48,7 @@ router
 .delete("/user/id",authenticateToken, userController.deleteClient)
 
 .post("/order", authenticateToken,orderController.postOrder)
+.post("/order/products/stadistics",orderController.getMostSoldProducts)
 .post("/order/id",authenticateToken, orderController.getOrderById)
 .post("/order/id/user",authenticateToken, orderController.getOrderByIdAndClient)
 .post("/order/id/sales",authenticateToken, orderController.getOrderByIdAndSales)

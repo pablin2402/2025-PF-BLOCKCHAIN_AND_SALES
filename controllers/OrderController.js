@@ -4,10 +4,9 @@ const mongoose = require("mongoose");
 const getOrderById = async (req, res) => {
   try {
     const { id_owner, page, limit, status, paymentType, payStatus, salesId, fullName, startDate, endDate } = req.body;
-    console.log(req.body)
+    console.log(fullName,limit)
     const pageNumber = parseInt(page);
     const limitNumber = parseInt(limit);
-
     let matchStage = { id_owner };
 
     if (payStatus) matchStage.payStatus = payStatus;
@@ -206,10 +205,76 @@ const getOrderById = async (req, res) => {
       orders: paginatedOrders,
       totalPages: Math.ceil(totalOrders / limitNumber),
       currentPage: pageNumber,
+      totalRecords: totalOrders
     });
   } catch (error) {
     console.error("Error en getOrderById:", error);
     res.status(500).json({ message: "Error obteniendo órdenes", error });
+  }
+};
+
+const getMostSoldProducts = async (req, res) => {
+  try {
+    const year = parseInt(req.body.year);
+    const month = parseInt(req.body.month);
+    const page = parseInt(req.body.page);
+    const itemsPerPage = parseInt(req.body.itemsPerPage);
+  
+    const startDate = month
+      ? new Date(Date.UTC(year, month - 1, 1))
+      : new Date(Date.UTC(year, 0, 1));
+
+    const endDate = month
+      ? new Date(Date.UTC(year, month, 1))
+      : new Date(Date.UTC(year + 1, 0, 1));
+
+    const matchStage = {
+      $match: {
+        creationDate: {
+          $gte: startDate,
+          $lt: endDate,
+        },
+      },
+    };
+
+    const aggregation = [
+      matchStage,
+      { $unwind: "$products" },
+      {
+        $group: {
+          _id: "$products.nombre",
+          totalCantidad: { $sum: "$products.cantidad" },
+        },
+      },
+      { $sort: { totalCantidad: -1 } },
+      {
+        $facet: {
+          paginatedResults: [
+            { $skip: (page - 1) * itemsPerPage },
+            { $limit: itemsPerPage },
+          ],
+          totalCount: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const [result] = await Order.aggregate(aggregation);
+
+    const totalItems = result.totalCount[0]?.count || 0;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    console.log(page, totalPages, totalItems)
+    res.json({
+      data: result.paginatedResults,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: page,
+      },
+    });
+  } catch (err) {
+    console.error("Error al obtener productos:", err);
+    res.status(500).json({ error: "Error del servidor" });
   }
 };
 
@@ -303,7 +368,8 @@ const getOrderSalesById = async (req, res) => {
 };
 const getOrderByIdAndClient = async (req, res) => {
   try {
-    const { id_client, id_owner, page = 1, limit = 10, startDate, endDate, estadoPago } = req.body;
+    const { id_client, id_owner, page, limit, startDate, endDate, estadoPago } = req.body;
+    console.log(page,limit)
 
     const matchStage = {
       id_client: mongoose.Types.ObjectId(id_client),
@@ -311,8 +377,6 @@ const getOrderByIdAndClient = async (req, res) => {
     };
 
     const pipeline = [];
-
-    // Ajustar fechas con UTC-4
     if (startDate && endDate) {
       pipeline.push(
         {
@@ -321,7 +385,7 @@ const getOrderByIdAndClient = async (req, res) => {
               $dateSubtract: {
                 startDate: "$creationDate",
                 unit: "hour",
-                amount: 4, // Ajuste de 4 horas a UTC-4
+                amount: 4, 
               },
             },
           },
@@ -465,59 +529,63 @@ const getOrderByIdAndClient = async (req, res) => {
       }
     );
 
-    // Agregar paginación
-    pipeline.push(
-      { $sort: { creationDate: -1 } },
-      { $skip: (page - 1) * limit },
-      { $limit: parseInt(limit) }
+    const pipelineBase = [...pipeline]; // Copia del pipeline antes de skip/limit
+
+// Pipeline para contar total
+const countPipeline = [...pipelineBase];
+countPipeline.push({ $count: "total" });
+
+const countResult = await Order.aggregate(countPipeline).exec();
+const totalOrders = countResult[0]?.total || 0;
+
+// Ahora agregas paginación al pipeline original
+pipeline.push(
+  { $sort: { creationDate: -1 } },
+  { $skip: (page - 1) * limit },
+  { $limit: parseInt(limit) }
+);
+
+let orders = await Order.aggregate(pipeline).exec();
+
+// Populate
+await Order.populate(orders, [
+  { path: "salesId" },
+  { path: "id_client" },
+]);
+
+// Filtro por nombre después de paginación (opcional según tu intención)
+if (req.body.fullName) {
+  const clientNameLower = req.body.fullName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  orders = orders.filter((order) => {
+    const name = (order.id_client?.name || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    const lastName = (order.id_client?.lastName || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    return (
+      name.includes(clientNameLower) || lastName.includes(clientNameLower)
     );
+  });
+}
 
-    const orders = await Order.aggregate(pipeline).exec();
+res.json({
+  orders,
+  totalPages: Math.ceil(totalOrders / limit),
+  currentPage: page,
+});
 
-    await Order.populate(orders, [
-      { path: "salesId" }, 
-      { path: "id_client" },
-    ]);
-
-    // Filtrado por nombre completo del cliente
-    if (req.body.fullName) {
-      const clientNameLower = req.body.fullName
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase();
-
-      orders = orders.filter((order) => {
-        const name = (order.id_client?.name || "")
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase();
-        const lastName = (order.id_client?.lastName || "")
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .toLowerCase();
-        return (
-          name.includes(clientNameLower) || lastName.includes(clientNameLower)
-        );
-      });
-    }
-
-    const totalOrders = orders.length;
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedOrders = orders.slice(start, end);
-
-    res.json({
-      orders: paginatedOrders,
-      totalPages: Math.ceil(totalOrders / limit),
-      currentPage: page,
-    });
   } catch (error) {
     console.error("Error al obtener órdenes con pagos:", error);
     res.status(500).json({ message: "Error al obtener las órdenes", error });
   }
 };
-
-
 const getOrderByIdAndSales = async (req, res) => {
   try {
     const {
@@ -619,8 +687,6 @@ const getOrderByIdAndSales = async (req, res) => {
     res.status(500).json({ message: "Error al obtener las órdenes", error });
   }
 };
-
-
 const postOrder = (req, res) => {
   try {
     const order = new Order({
@@ -693,7 +759,6 @@ const getOrdersByYear = async (req, res) => {
     res.status(500).json({ message: "Error obteniendo ventas", error });
   }
 };
-
 const deleteOrder = async (req, res) => {
   const order_id = req.body.order_id;
   const deleteProduct = await Order.deleteOne({ order_id: order_id });
@@ -737,5 +802,6 @@ module.exports = {
     getOrdersByYear,
     getOrderByIdAndSales,
     getOrderByDeliverStatusAnd,
-    deleteOrderById
+    deleteOrderById,
+    getMostSoldProducts
 };

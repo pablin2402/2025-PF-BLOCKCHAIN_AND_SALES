@@ -8,7 +8,7 @@ const clientSchema = new Schema({
   creationDate: { type: Date, default: Date.now }, 
   directionId: {type: String, require: true},
   number:{type: Number, require: true}, //REQUIRED
-  identityNumber:{type: Number, require: true}, //REQUIRED
+  identityNumber:{type: String, require: true}, //REQUIRED
   company: { type: String, require: true },
   email: { type: String, require: true },
   socialNetwork: { type: String, require: true },
@@ -19,7 +19,6 @@ const clientSchema = new Schema({
   userCategory: { type: String, require: true },
   client_location: { type: Schema.ObjectId, ref:"ClientLocation" },
   sales_id: { type: Schema.ObjectId, ref:"SalesMan" },
-
 });
 
 module.exports = mongoose.model("User", clientSchema);

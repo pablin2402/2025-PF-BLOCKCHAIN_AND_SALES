@@ -28,7 +28,6 @@ require('./database');
 const app = express();
 require("dotenv").config();
 const allSessionsObject  ={};
-const sessionClients = {};
 
 const createWhatsAppSession = (id,socket) =>{
   const client = new Client({
@@ -63,7 +62,6 @@ const createWhatsAppSession = (id,socket) =>{
       return chat;
     }));
 
-    //socket.emit("loadChats", { allChats: chatsWithProfileImages });
   });
   client.on("authenticated", () => {
     console.log("authenticated");
@@ -259,11 +257,13 @@ app.use("/whatsapp", apiRoute);
 app.use("/whatsapp", inventaryRoute);
 app.use("/whatsapp", userRoute);
 app.use("/whatsapp", kanbanRoute);
-const ip = '172.20.10.14';
+//const ip = '192.168.0.104';
 //192.168.1.87
 //192.168.0.104
+//app.listen(port,ip, () => {
+
 const port = process.env.PORT || 3040;
-app.listen(port,ip, () => {
+app.listen(port, () => {
     console.log(`server on port 3023 `);
 });
 

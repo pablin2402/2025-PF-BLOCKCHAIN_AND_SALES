@@ -36,6 +36,7 @@ router
 .put("/route/progress/id",authenticateToken,salesManActivityController.updateRouteSalesProgress)
 
 .post("/order/pay/list/id",authenticateToken, orderPayController.getOrderPay)
+.post("/order/pay/list/calendar",authenticateToken, orderPayController.getOrderPayByCalendar)
 .post("/order/pay/sales/id",authenticateToken, orderPayController.getOrderPayBySales)
 .post("/order/pay",authenticateToken, upload.single("saleImage"), orderPayController.postOrderPay)
 .post("/order/pay/id",authenticateToken, orderPayController.getOrderPayId);
