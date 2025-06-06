@@ -1,10 +1,119 @@
 const Order = require("../models/Order");
 const mongoose = require("mongoose");
+const tf = require("@tensorflow/tfjs");
+
+// Entrena y predice próximos N meses
+async function trainAndPredictLSTM(productSales, lookBack = 12, forecastHorizon = 3) {
+  const values = Object.entries(productSales)
+    .sort(([a], [b]) => new Date(a) - new Date(b))
+    .map(([, v]) => v);
+
+  if (values.length <= lookBack) {
+    throw new Error("No hay suficientes datos para entrenar.");
+  }
+
+  // Normalizar
+  const max = Math.max(...values);
+  const normalized = values.map(v => v / max);
+
+  // Crear secuencias X e Y
+  const X = [];
+  const y = [];
+  for (let i = 0; i < normalized.length - lookBack; i++) {
+    X.push(normalized.slice(i, i + lookBack));
+    y.push(normalized[i + lookBack]);
+  }
+
+  const xs = tf.tensor2d(X).reshape([X.length, lookBack, 1]);
+  const ys = tf.tensor2d(y);
+
+  // Crear modelo LSTM
+  const model = tf.sequential();
+  model.add(tf.layers.lstm({ units: 50, inputShape: [lookBack, 1] }));
+  model.add(tf.layers.dense({ units: 1 }));
+
+  model.compile({ loss: "meanSquaredError", optimizer: "adam" });
+
+  // Entrenar
+  await model.fit(xs, ys, { epochs: 100, verbose: 0 });
+
+  // Predecir
+  let input = normalized.slice(-lookBack);
+  const predictions = [];
+
+  for (let i = 0; i < forecastHorizon; i++) {
+    const pred = model.predict(tf.tensor2d([input]).reshape([1, lookBack, 1]));
+    const next = (await pred.data())[0];
+    predictions.push(next * max);
+    input = [...input.slice(1), next];
+  }
+
+  return predictions;
+}
+
+const predictSalesForTopProducts = async (req, res) => {
+  try {
+    const now = new Date();
+    const startDate = new Date(now.getUTCFullYear() - 10, 0, 1);
+    const endDate = new Date(now.getUTCFullYear() + 1, 0, 1);
+
+    const matchStage = {
+      $match: {
+        creationDate: { $gte: startDate, $lt: endDate },
+      },
+    };
+
+    const unwindStage = { $unwind: "$products" };
+
+    const groupStage = {
+      $group: {
+        _id: "$products.nombre",
+        totalCantidad: { $sum: "$products.cantidad" },
+      },
+    };
+
+    const sortStage = { $sort: { totalCantidad: -1 } };
+    const limitStage = { $limit: 10 };
+
+    const topProductsAgg = [matchStage, unwindStage, groupStage, sortStage, limitStage];
+    const topProducts = await Order.aggregate(topProductsAgg);
+
+    const orders = await Order.find({ creationDate: { $gte: startDate, $lt: endDate } });
+
+    const predictions = await Promise.all(
+      topProducts.map(async (product) => {
+        try {
+          const ventasPorMes = generateMonthlySalesData(orders, product._id);
+          const forecast = await trainAndPredictLSTM(ventasPorMes);
+          return {
+            nombre: product._id,
+            totalCantidad: product.totalCantidad,
+            forecast: forecast.map((val, i) => ({
+              mes: `+${i + 1}`,
+              valor: Math.round(val),
+            })),
+          };
+        } catch (err) {
+          return {
+            nombre: product._id,
+            totalCantidad: product.totalCantidad,
+            forecast: [],
+            error: "Insuficientes datos para predecir",
+          };
+        }
+      })
+    );
+    console.log(predictions)
+    res.json({ data: predictions });
+  } catch (err) {
+    console.error("Error al predecir:", err);
+    res.status(500).json({ error: "Error del servidor" });
+  }
+};
 
 const getOrderById = async (req, res) => {
   try {
     const { id_owner, page, limit, status, paymentType, payStatus, salesId, fullName, startDate, endDate } = req.body;
-    console.log(fullName,limit)
     const pageNumber = parseInt(page);
     const limitNumber = parseInt(limit);
     let matchStage = { id_owner };
@@ -42,7 +151,6 @@ const getOrderById = async (req, res) => {
     } else {
       pipeline.push({ $match: matchStage });
     }
-
     pipeline.push(
       {
         $lookup: {
@@ -167,14 +275,16 @@ const getOrderById = async (req, res) => {
         },
       }
     );
-
+    pipeline.push({
+      $sort: { creationDate: -1 }
+    });
+    
     let orders = await Order.aggregate(pipeline);
 
     await Order.populate(orders, [
       { path: "salesId" },
       { path: "id_client" },
     ]);
-
     if (fullName) {
       const clientNameLower = fullName
         .normalize("NFD")
@@ -195,12 +305,10 @@ const getOrderById = async (req, res) => {
         );
       });
     }
-
     const totalOrders = orders.length;
     const start = (pageNumber - 1) * limitNumber;
     const end = start + limitNumber;
     const paginatedOrders = orders.slice(start, end);
-
     res.json({
       orders: paginatedOrders,
       totalPages: Math.ceil(totalOrders / limitNumber),
@@ -277,8 +385,6 @@ const getMostSoldProducts = async (req, res) => {
     res.status(500).json({ error: "Error del servidor" });
   }
 };
-
-
 const deleteOrderById = async (req, res) => {
   try {
     const { id_owner, id } = req.body;
@@ -803,5 +909,6 @@ module.exports = {
     getOrderByIdAndSales,
     getOrderByDeliverStatusAnd,
     deleteOrderById,
-    getMostSoldProducts
+    getMostSoldProducts,
+    predictSalesForTopProducts
 };

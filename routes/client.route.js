@@ -5,6 +5,7 @@ const clientController = require("../controllers/ClientController");
 const salesManController = require("../controllers/SalesManController");
 const {authenticateToken} = require("../middlewares/authentication.js");
 const orderPayController = require("../controllers/OrderPayController");
+const deliveryController = require("../controllers/DeliveryController.js");
 const salesManActivityController = require("../controllers/SalesManActivityController");
 const upload = require("./upload");
 
@@ -16,6 +17,10 @@ router
 .post("/client/archived",authenticateToken, clientController.getClientsArchived)
 .post("/client/sales",authenticateToken, clientController.getClientInfoByIdAndSales)
 .post("/login",authenticateToken, clientController.loginUser)
+
+.post("/delivery",authenticateToken, deliveryController.postNewDelivery)
+.post("/delivery/list",authenticateToken, deliveryController.getDelivery)
+
 
 .put("/client/archived",authenticateToken, clientController.updateUserStatus)
 .post("/sales/list/id",authenticateToken, salesManController.getSalesMan)

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
 const roles = {
-    values: ['ADMIN', 'USER','SALES','RESALES'],
+    values: ['ADMIN', 'USER','SALES','DELIVERY'],
     message: '{VALUE} no es un rol válido'
 }
 const userSchema = new Schema({

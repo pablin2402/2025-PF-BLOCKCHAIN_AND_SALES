@@ -34,8 +34,36 @@ const postNewAccount = (req, res) => {
   }
 };
 const getSalesMan = async (req, res) => {
-      await SalesMan.find({id_owner:String(req.body.id_owner)}).then(p=>  res.json(p));
+  try {
+    const { id_owner, page, limit, searchTerm = "" } = req.body;
+
+    const query = { id_owner: String(id_owner) };
+
+    if (searchTerm.trim() !== "") {
+      const regex = new RegExp(searchTerm.trim(), "i");
+      query.$or = [
+        { fullName: { $regex: regex } },
+        { lastName: { $regex: regex } }
+      ];
+    }
+
+    const totalItems = await SalesMan.countDocuments(query);
+    const data = await SalesMan.find(query)
+      .skip((Number(page) - 1) * Number(limit))
+      .limit(Number(limit));
+
+    res.json({
+      data,
+      items: totalItems,
+      page: Number(page),
+      totalPages: Math.ceil(totalItems / Number(limit))
+    });
+  } catch (error) {
+    console.error("Error al obtener vendedores:", error);
+    res.status(500).json({ message: "Error al obtener vendedores", error });
+  }
 };
+
 const getSalesManById = async (req, res) => {
   try {
     const salesMan = await SalesMan.findOne({

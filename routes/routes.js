@@ -49,6 +49,7 @@ router
 
 .post("/order", authenticateToken,orderController.postOrder)
 .post("/order/products/stadistics",orderController.getMostSoldProducts)
+.post("/order/products/analysis",orderController.predictSalesForTopProducts)
 .post("/order/id",authenticateToken, orderController.getOrderById)
 .post("/order/id/user",authenticateToken, orderController.getOrderByIdAndClient)
 .post("/order/id/sales",authenticateToken, orderController.getOrderByIdAndSales)

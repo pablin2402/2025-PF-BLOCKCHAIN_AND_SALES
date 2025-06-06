@@ -9,13 +9,17 @@ const getProductsById = async (req, res) => {
     if (req.body.status === true) {
       query.status = req.body.status;
     }
+
     if (req.body.category) {
       query.categoryId = req.body.category;
     }
-    if (req.body.search) {
-      query.productName = { $regex: req.body.search, $options: "i" };
+
+    if (req.body.search && req.body.search.trim() !== "") {
+      query.productName = { $regex: req.body.search.trim(), $options: "i" };
     }
     const total = await Product.countDocuments(query);
+    console.log(total);
+
     const products = await Product.find(query)
       .populate("categoryId")
       .populate("supplierId")
@@ -34,6 +38,7 @@ const getProductsById = async (req, res) => {
     res.status(500).json({ message: "Error fetching products", error });
   }
 };
+
 const postProductsMany = async (req, res) => {
   try {
     const categories = req.body.categories;

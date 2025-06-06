@@ -23,6 +23,7 @@ const postNewAccountUser = (req, res) => {
         return;
       }
       res.status(200).send({
+        id:client._id,
         email: client.email,
         active: client.active,
         role: client.role,
