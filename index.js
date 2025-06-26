@@ -246,7 +246,7 @@ const ip = '192.168.0.104';
 //app.listen(port,ip, () => {
 
 const port = process.env.PORT || 3041;
-app.listen(port,() => {
+app.listen(port,'0.0.0.0',() => {
   console.log(`server on port 3023 `);
 });
 
