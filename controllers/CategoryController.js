@@ -69,7 +69,6 @@ const postCategory = (req, res) => {
 const postCategoryMany = async (req, res) => {
   try {
     const categories = req.body.categories;
-    console.log(categories)
     if (!categories || categories.length === 0) {
         return res.status(400).json({ message: "No hay categorias para importar." });
     }

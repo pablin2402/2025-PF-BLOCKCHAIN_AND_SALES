@@ -45,8 +45,6 @@ const postKanban = (req, res) => {
 const postKanbanByKanbanId = async (req, res) => {
   try {
     const kanban = await Kanban.findOne({ id_kanban: String(req.body.id_kanban) });
-    console.log(req.body)
-
     if (kanban) {
         kanban.clients.push(req.body.clients);
         await kanban.save((err,kanban) => {
@@ -103,7 +101,6 @@ const updateKanban = async (req, res) => {
         const indice2 = kanban[0].clients.findIndex((elemento) => elemento.task_id === req.body.task_id);
         if(indice === 0){
           const elemementToMove = kanban[0].tasks[indice];
-          console.log(elemementToMove);
           const update = await Kanban.updateOne(
             { id_kanban: req.body.id_kanban_new },
             { $addToSet: { tasks: elemementToMove }}
@@ -115,8 +112,6 @@ const updateKanban = async (req, res) => {
           res.json(update)
         }else if(indice2 === 0){
           const elemementToMove = kanban[0].clients[indice2];
-          console.log(kanban);
-
           const update = await Kanban.updateOne(
             { id_kanban: req.body.id_kanban_new },
             { $addToSet: { clients: elemementToMove }}
@@ -159,7 +154,6 @@ const deleteKanban = async (req, res) => {
   
   try {
     const deletedKanban = await Kanban.deleteOne({ id_kanban: idKanban });
-    console.log(deleteKanban)
     if (!deletedKanban) {
       return res.status(404).json({ message: "No se encontró el kanban con los parámetros dados." });
     }

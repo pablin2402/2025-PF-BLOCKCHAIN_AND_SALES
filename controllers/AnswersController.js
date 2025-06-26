@@ -35,7 +35,6 @@ const uploadProductStatus = async (req, res) => {
     }
 }
 const postAnswer = (req, res) => {
-    console.log(req.body)
   try {
    const message = new AnswerMessage({
       fullMessage : req.body.fullMessage,

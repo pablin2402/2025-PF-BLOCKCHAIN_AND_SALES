@@ -54,7 +54,6 @@ const createWhatsAppSession = (id,socket) =>{
     });
   });
   client.on('message', async (message) => {
-    console.log("mensaje", message);
     const allChats = await client.getChats();
     const chatsWithProfileImages = await Promise.all(allChats.map(async (chat) => {
       const contact = await client.getProfilePicUrl(chat.id._serialized);
@@ -64,18 +63,15 @@ const createWhatsAppSession = (id,socket) =>{
 
   });
   client.on("authenticated", () => {
-    console.log("authenticated");
     socket.emit("authenticated",{message:"you did it"})
 
   });
   client.on("ready", () => {
     allSessionsObject[id] =client;
     socket.emit("ready",{id,message:"you did it"})
-    console.log(id, client)
   });
   client.on('remote_session_saved', (qr) => {
     qrcode.generate(qr, {small: true});
-      console.log('QR RECEIVED', qr);
   });
   client.initialize();
 
@@ -86,7 +82,6 @@ const createWhatsAppSession = (id,socket) =>{
 
       const chat = await client.getChatById(chatId);
       const sentMessage = await chat.sendMessage(message);
-      console.log('Message sent successfully:', sentMessage.body);
       client.destroy();
       res.status(200).send({ message: 'Message sent successfully' });
     } catch (error) {
@@ -115,7 +110,6 @@ const getWhatsappSession = (id, socket) =>{
     }),
     });
     client.on('ready', () => {
-      console.log('Client is ready!');
       socket.emit("ready",{ qr,});
       client.on('qr', (qr) => {
         socket.emit("qr",{
@@ -136,31 +130,25 @@ const socketIO = new Server(httpServer, {
 socketIO.on("connection", (socket) => {
   
     socket.on("disconnect", () => {
-      console.log("User disconnected");
     });
     socket.on("connected", (data) => {
       socket.emit("hello", "hello from the serve");
     });
     socket.on("createSession", (data) => {
-      console.log('data', data);
       const {id} = data;
       createWhatsAppSession(id, socket)
     });
     socket.on("getContacts", (data) => {
-      console.log('data', data);
       const {id} = data;
       createWhatsAppSession(id, socket)
     });
     socket.on("getSession", (data) => {
-      console.log('data', data);
       const {id} = data;
       getWhatsappSession(id, socket);
     });
     socket.on("getAllChats", async (data) => {
-      const id = "caca";
-     // console.log(id, "hola")
+      const id = "1";
       const client = allSessionsObject[id];
-      console.log(client)
       const allChats = await client.getChats();
       const chatsWithProfileImages = await Promise.all(allChats.map(async (chat) => {
         const contact = await client.getProfilePicUrl(chat.id._serialized);
@@ -179,9 +167,8 @@ socketIO.on("connection", (socket) => {
       return null;
     }
     socket.on("getChatsById", async (data) => {
-      const id = "caca";
+      const id = "1";
       const chatId = data.chatId;
-     // console.log(id, chatId)
       const client = allSessionsObject[id];
       const chat = await client.getChatById(chatId);
       const messages = await chat.fetchMessages({ limit: 50 }); 
@@ -213,7 +200,6 @@ socketIO.on("connection", (socket) => {
         return message;
       }));
     
-      //console.log("mensajes", processedMessages)
       socket.emit("allChatsById",{
         allChats: processedMessages,
 
@@ -221,8 +207,6 @@ socketIO.on("connection", (socket) => {
     });
     socket.on("sendMessage", async (data) => {
       const { id, chatId, chat } = data;
-      //sessionClients[id] = client;
-      console.log("Hola aaaaaa",id, chatId, chat)
       const client = allSessionsObject["caca"];
       if (!client) {
         console.error(`WhatsApp session with id ${id} does not exist`);
@@ -231,7 +215,6 @@ socketIO.on("connection", (socket) => {
       try {
           const chatObject = await client.getChatById(chatId);
           await chatObject.sendMessage(chat);
-          console.log('Message sent successfully:', chat);        
           socket.emit("messageSent", { message: 'Message sent successfully' });
       } catch (error) {
         console.error('Error sending message:', error);
@@ -240,7 +223,7 @@ socketIO.on("connection", (socket) => {
     });
        
 });
-const PORT = process.env.PORT || 3050;
+const PORT = process.env.PORT || 3051;
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
@@ -257,13 +240,13 @@ app.use("/whatsapp", apiRoute);
 app.use("/whatsapp", inventaryRoute);
 app.use("/whatsapp", userRoute);
 app.use("/whatsapp", kanbanRoute);
-//const ip = '192.168.0.104';
+const ip = '192.168.0.104';
 //192.168.1.87
 //192.168.0.104
 //app.listen(port,ip, () => {
 
-const port = process.env.PORT || 3040;
-app.listen(port, () => {
-    console.log(`server on port 3023 `);
+const port = process.env.PORT || 3041;
+app.listen(port,() => {
+  console.log(`server on port 3023 `);
 });
 

@@ -46,17 +46,14 @@ const postInventary = (req, res) => {
       });
     });
   } catch (e) {
-     console.log(e);
   }
 };
 const getInventaryByProductId = async (req, res) => {
   try {
     let query = { userId: String(req.body.id_user) };
-     console.log(req.body.id_user)
     const inventory = await Inventory.find(query)
     .skip((req.body.page - 1) * req.body.limit)
     .limit(Number(req.body.limit));
-    console.log(inventory)
     const totalItems = await Inventory.countDocuments(query);
     res.json({
       totalPages: Math.ceil(totalItems / req.body.limit),
@@ -72,7 +69,6 @@ const getInventaryByProductId = async (req, res) => {
 
 
 const updateQuantity = async (req, res) => {
-  console.log(req.body)
   try {
     const updatedProduct = await Inventory.findOneAndUpdate(
       { productId: req.body.productId },

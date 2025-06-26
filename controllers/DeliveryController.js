@@ -7,12 +7,13 @@ const postNewDelivery = (req, res) => {
         fullName: req.body.fullName,
         lastName:req.body.lastName,
         email: req.body.email,
-        role: req.body.role,
-        id_owner: req.body.id_owner,
-        phoneNumber: req.body.phoneNumber,
         identificationNumber: req.body.identificationNumber,
-        client_location: req.body.client_location,
-        userId: req.body.userId
+        phoneNumber: req.body.phoneNumber,
+        active: true,
+        region: req.body.region,
+        id_owner: req.body.id_owner,
+        client_location:  new mongoose.Types.ObjectId(req.body.client_location),
+        userId:  new mongoose.Types.ObjectId(req.body.userId)
     });
     client.save((err,client) => {
       if (err) {
@@ -23,7 +24,6 @@ const postNewDelivery = (req, res) => {
         fullName: client.fullName,
         lastName:client.lastName,
         email: client.email,
-        role: client.role,
         id_owner: client.id_owner,
         phoneNumber: client.phoneNumber,
         userId: client.userId,
@@ -32,7 +32,6 @@ const postNewDelivery = (req, res) => {
       });
     });
   } catch (e) {
-    myConsole.log(e);
   }
 };
 const getDelivery = async (req, res) => {
@@ -129,15 +128,13 @@ const getDeliveryById = async (req, res) => {
   try {
     const salesMan = await Delivery.findOne({
       id_owner: String(req.body.id_owner),
-      _id: new mongoose.Types.ObjectId(req.body._id)
+      userId: new mongoose.Types.ObjectId(req.body._id)
     })
     .populate("client_location")
     .populate("userId");
-    console.log(salesMan)
     if (!salesMan) {
       return res.status(404).json({ message: "Vendedor no encontrado" });
     }
-
     res.json(salesMan);
   } catch (error) {
     res.status(500).json({ message: "Error en la búsqueda", error });

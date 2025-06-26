@@ -31,7 +31,6 @@ const ReceivedMessage = (req, res) => {
       var messages = messageObject[0];
       var number = messages["from"];
       var text = GetTextUser(messages);
-      console.log(text)
       if (text != "") 
       {
         processMessage.Process(text, number);
@@ -150,7 +149,6 @@ function GetTextUser(messages) {
   return text;
 };
 const deleteMessage = async (req,res) => {
-  console.log(req.body)
   try {
     await Message.findByIdAndRemove(req.body.id);
     res.status(200).send({ message: 'Message deleted successfully' });

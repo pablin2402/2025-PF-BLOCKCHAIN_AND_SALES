@@ -12,6 +12,7 @@ const orderSchema = new Schema({
   numberOrden: { type: String, require: true },
   paymentStatus: { type: String, require: true },
   id_client: { type: Schema.ObjectId, ref: "User" },
+  reviewer: { type: String, require: true },
 });
 
 module.exports = mongoose.model("OrderPay", orderSchema);

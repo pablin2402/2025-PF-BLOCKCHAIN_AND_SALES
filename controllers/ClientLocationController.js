@@ -1,33 +1,79 @@
 const User = require("../models/User");
 const ClientLocation = require("../models/ClientLocation");
+const mongoose = require("mongoose");
+
 
 const getClientLocationById = async (req, res) => {
-  console.log(req.body);
-  const { id_owner, userCategory, salesFullName = [], salesLastName = [] } = req.body;
+  const {
+    page = 1,
+    limit = 10,
+    nameClient
+  } = req.body;
 
-  let query = { id_owner: String(id_owner) };
-  if (Array.isArray(userCategory) && userCategory.length > 0) {
-    query.userCategory = { $in: userCategory };
-  }
+  const skip = (page - 1) * limit;
 
   try {
-    let users = await User.find(query)
-      .populate("client_location")
-      .populate("sales_id");
+    const query = { id_owner: String(req.body.id_owner) };
 
-    if (salesFullName.length > 0 || salesLastName.length > 0) {
-      users = users.filter((user) => {
-        const matchFull = salesFullName.includes(user.sales_id?.fullName);
-        const matchLast = salesLastName.includes(user.sales_id?.lastName);
-        return matchFull && matchLast;
-      });
+    if ( req.body.salesCategory && mongoose.Types.ObjectId.isValid(req.body.salesCategory)) {
+      query.sales_id = new mongoose.Types.ObjectId( req.body.salesCategory);
     }
-
-    res.json(users);
+    if ( req.body.userCategory ) {
+      query.userCategory = req.body.userCategory;
+    }
+    if (nameClient && nameClient.trim() !== "") {
+      query.$or = [
+        { name: { $regex: nameClient, $options: "i" } },
+        { lastName: { $regex: nameClient, $options: "i" } }
+      ];
+    }
+    const total = await User.countDocuments(query);
+    const users = await User.find(query)
+      .populate("client_location")
+      .populate("sales_id")
+      .skip(skip)
+      .limit(parseInt(limit));
+    res.json({
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / limit),
+      users
+    });
   } catch (error) {
     res.status(500).json({ message: "Error al obtener clientes", error });
   }
 };
+const getClientLocationByIdAndSales = async (req, res) => {
+  try {
+    const query = { id_owner: String(req.body.id_owner) };
+
+    if (req.body.sales_id && mongoose.Types.ObjectId.isValid(req.body.sales_id)) {
+      query.sales_id = new mongoose.Types.ObjectId(req.body.sales_id);
+    }
+
+    const nameClient = req.body.nameClient;
+    if (nameClient && nameClient.trim() !== "") {
+      query.$or = [
+        { name: { $regex: nameClient, $options: "i" } },
+        { lastName: { $regex: nameClient, $options: "i" } }
+      ];
+    }
+
+    const users = await User.find(query)
+      .populate("client_location")
+      .populate("sales_id");
+
+    res.json({
+      total: users.length,
+      users,
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Error al obtener clientes", error });
+  }
+};
+
+
 const getClientInfoById = async (req, res) => {
   await User.find({_id:String(req.body._id)})
   .populate("client_location")
@@ -73,5 +119,5 @@ const postClientLocation = (req, res) => {
   };
 
 module.exports = {
-  getClientLocationById,postClientLocation,getClientInfoById
+  getClientLocationById,postClientLocation,getClientInfoById,getClientLocationByIdAndSales
 };

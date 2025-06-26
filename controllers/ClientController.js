@@ -6,16 +6,28 @@ const mongoose = require("mongoose");
 const bcrypt = require('bcryptjs');
 const saltRounds = 10;
 const jwt = require('jsonwebtoken');
+const getClientsList = async (req, res) => {
+  try {
+    const clients = await Client.find({ id_owner: String(req.body.id_owner) })
+      .populate("salesMan"); 
+
+    res.json(clients);
+  } catch (error) {
+    console.error("Error al obtener la lista de clientes:", error);
+    res.status(500).json({ message: "Error al obtener los clientes." });
+  }
+};
 
 const postNewAccountUser = (req, res) => {
   try {
-    console.log(req.body)
    const client = new Client({
         email: req.body.email,
         password: bcrypt.hashSync(req.body.password, saltRounds),
         role: req.body.role,
         id_owner: req.body.id_owner,
-        active: req.body.active
+        active: req.body.active,
+        region: req.body.region,
+        salesMan: new mongoose.Types.ObjectId(req.body.salesMan)
     });
     client.save((err,client) => {
       if (err) {
@@ -27,7 +39,9 @@ const postNewAccountUser = (req, res) => {
         email: client.email,
         active: client.active,
         role: client.role,
+        region: client.region,
         id_owner: client.id_owner,
+        salesMan: client.salesMan
       });
     });
   } catch (e) {
@@ -39,25 +53,26 @@ const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await Client.findOne({ email });
-
-    if (!user) {
-      return res.status(401).send({ message: "Usuario no encontrado" });
-    }
-
+    const user = await Client.findOne({ email }).populate("salesMan"); 
+    ; 
     const passwordMatch = await bcrypt.compare(password, user.password);
-
-    if (!passwordMatch) {
-      return res.status(401).send({ message: "Contraseña incorrecta" });
+    if (!user || !passwordMatch) {
+      return res.status(401).send({ message: "Usuario o contraseña no coinciden" });
     }
-
-    const token = jwt.sign({ id: user._id, id_owner: user.id_owner }, JWT_SECRET, { expiresIn: "24h" });
+    const token = jwt.sign(
+      { id: user._id, id_owner: user.id_owner },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
 
     res.send({ message: "Login successful", user, token });
+
   } catch (error) {
+    console.error("Error en login:", error);
     res.status(500).send({ message: "Error interno del servidor" });
   }
 };
+
 
 module.exports = { loginUser };
 
@@ -106,13 +121,14 @@ const getUser = async (req, res) =>{
 };
 const getClients = async (req, res) => {
   try {
-    const { id_owner, sales_id, clientName, page = 1, limit = 0 } = req.body;
-
+    const { id_owner, sales_id, region,clientName, page, limit} = req.body;
     let filter = { id_owner };
     if (sales_id) {
       filter.sales_id = sales_id;
     }
-
+    if (region) {
+      filter.region = region;
+    }
     let clientList = await User.find(filter)
       .populate("sales_id")
       .populate("client_location");
@@ -161,7 +177,6 @@ const getClientInfoById = async (req, res) => {
 };
 const getClientInfoByIdAndSales = async (req, res) => {
   try {
-    console.log(req.body)
     const { id_user, salesId, page, limit, search} = req.body;
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -244,7 +259,8 @@ const postClient = (req, res) => {
       chat: req.body.chat,
       userCategory: req.body.userCategory,
       client_location: mongoose.Types.ObjectId(req.body.directionId),
-      sales_id: mongoose.Types.ObjectId(req.body.sales_id)
+      sales_id: mongoose.Types.ObjectId(req.body.sales_id),
+      region: req.body.region
     });
     clients.save((err, user) => {
       if (err) {
@@ -254,7 +270,6 @@ const postClient = (req, res) => {
       res.send({ message: "User was registered successfully!" });
     });
   } catch (e) {
-    console.log("Mensaje de depuración", variable);
   }
 };
 const updateUserStatus = async (req, res) => {
@@ -290,5 +305,5 @@ const deleteClient = async (req, res) => {
   return res.status(200).json({ message: 'Cliente eliminado correctamente' });
 };
 module.exports = {
-  postNewAccountUser, auth,getUser, getClientInfoByIdAndSales,loginUser,getClients, getClientsArchived,getMessagesById, getClientInfoById, postClient, updateUserFile,updateUserStatus, deleteClient
+  postNewAccountUser, getClientsList,auth,getUser, getClientInfoByIdAndSales,loginUser,getClients, getClientsArchived,getMessagesById, getClientInfoById, postClient, updateUserFile,updateUserStatus, deleteClient
 };

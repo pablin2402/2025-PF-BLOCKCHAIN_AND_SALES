@@ -15,7 +15,7 @@ const clientSchema = new Schema({
   notes: { type: String, require: true },
   id_user: { type: String, require: true },
   id_owner: { type: String, require: true },
-  status: { type: String, require: true },
+  region: { type: String, require: true },
   userCategory: { type: String, require: true },
   client_location: { type: Schema.ObjectId, ref:"ClientLocation" },
   sales_id: { type: Schema.ObjectId, ref:"SalesMan" },

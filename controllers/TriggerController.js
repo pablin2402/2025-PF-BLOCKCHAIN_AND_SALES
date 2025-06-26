@@ -49,7 +49,6 @@ const AutomatizationList = require("../models/AutomatizationList");
               currentWeek > getWeek(scheduledDailyDate) && 
               status === true && 
               weeklysentStatus === true) {
-              console.log('Sending weekly message:', messageToSend);
               trigger.lastWeeklySent = scheduledWeeklyDate;
               trigger.save();
           }
@@ -90,7 +89,6 @@ const AutomatizationList = require("../models/AutomatizationList");
   });
   router.post('/send-email', async (req, res) => {
     const { to, subject, html } = req.body;
-    console.log(to,subject,html)
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {

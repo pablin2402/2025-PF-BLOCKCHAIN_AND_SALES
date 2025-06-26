@@ -44,7 +44,6 @@ const getAutomatizationList = async (req, res) => {
   res.json(automatizationList);
 };
 const postAutomatizationList = (req, res) => {
-  console.log(req.body)
   try {
    const automatization = new AutomatizationList({
         title: req.body.title,

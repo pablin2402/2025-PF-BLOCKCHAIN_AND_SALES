@@ -69,7 +69,6 @@ router.post('/upload-pdf', upload.single('Pdf'), async (req, res) => {
     const fileId = await uploadToDrive(req.file);
     const pdfUrl = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
     const imageUrl = await getPublicImageUrl(fileId);
-    console.log('Enlace de la imagen:', imageUrl);
     res.status(200).json({ message: 'PDF subido correctamente', imageUrl });
   } catch (error) {
     console.error('Error al subir el PDF a Google Drive:', error);
@@ -86,7 +85,6 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
     const fileId = await uploadToDrive(req.file);
     const pdfUrl = `https://drive.google.com/file/d/${fileId}/view?usp=sharing`;
     const imageUrl = await getPublicImageUrl(fileId);
-    console.log('Enlace de la imagen:', imageUrl);
     res.status(200).json({ message: 'imagen subido correctamente', imageUrl });
   } catch (error) {
     console.error('Error al subir el PDF a Google Drive:', error);

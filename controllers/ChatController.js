@@ -4,7 +4,6 @@ const getAnswerById = async (req, res) => {
     await AnswerMessage.find({id_owner:String(req.body.id_owner)}).then(p=>  res.json(p));
 };
 const postChat = (req, res) => {
-    console.log(req.body)
   try {
    const message = new ChatController({
         lastMessage: req.body.lastMessage,

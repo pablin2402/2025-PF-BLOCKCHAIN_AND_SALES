@@ -117,7 +117,6 @@ const getRouteSalesById = async (req, res) => {
   }
 };
 const deleteRouteSalesById = async (req, res) => {
-   console.log(req.body)
   try {
       const query = {
         id_owner: String(req.body.id_owner),
@@ -139,36 +138,37 @@ const getSalesManByIdActivity = async (req, res) => {
       id_owner: String(req.body.id_owner),
       salesMan: new mongoose.Types.ObjectId(req.body.salesMan),
     };
+
     if (req.body.startDate && req.body.endDate) {
-        query.creationDate = {
-          $gte: new Date(req.body.startDate ),
-          $lte: new Date(req.body.endDate)
-      };    
-    }else {
+      query.creationDate = {
+        $gte: new Date(req.body.startDate),
+        $lte: new Date(req.body.endDate),
+      };
+    } else {
       const today = new Date();
       const startOfDay = new Date(today.setHours(0, 0, 0, 0));
       const endOfDay = new Date(today.setHours(23, 59, 59, 999));
       query.creationDate = {
         $gte: startOfDay,
-        $lte: endOfDay
+        $lte: endOfDay,
       };
     }
+
     if (req.body.details) {
-      query.details = req.body.details  
+      query.details = req.body.details;
     }
 
     const salesManData = await SalesMan.find(query)
       .populate("salesMan")
       .populate("clientName");
 
-    if (!salesManData || salesManData.length === 0) {
-      return res.status(404).json({ message: "No se encontraron actividades para el vendedor" });
-    }
-    res.json(salesManData);
+    res.json(salesManData || []);
+    
   } catch (error) {
     res.status(500).json({ message: "Error en la búsqueda", error });
   }
 };
+
 const getSalesManByIdAndDayActivity = async (req, res) => {
   try {
     const limit = 8;
@@ -211,7 +211,6 @@ const getSalesManByIdAndDayActivity = async (req, res) => {
         .limit(limit),
       SalesMan.countDocuments(query),
     ]);
-    console.log(data)
     res.json({
       total,
       page: parseInt(req.body.page),
@@ -312,7 +311,6 @@ const updateRouteSalesStatus = async (req, res) => {
 };
 
 const updateRouteSalesProgress = async (req, res) => {
-  console.log(req.body);
   try {
     const query = {
       id_owner: String(req.body.id_owner),

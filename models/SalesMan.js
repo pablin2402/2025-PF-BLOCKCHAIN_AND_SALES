@@ -16,6 +16,7 @@ const userSchema = new Schema({
     id_owner: { type: String, require: true },
     client_location: { type: Schema.ObjectId, ref:"ClientLocation" },
     userId: { type: Schema.ObjectId, ref:"Client" },
+    region: { type: String,require: true },
 
 });
 

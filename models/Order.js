@@ -17,8 +17,10 @@ const orderSchema = new Schema({
   orderStatus: { type: String, require: true },
   payStatus: { type: String, require: true },
   dueDate: { type: Date},
+  region:{type: String, require: true},
   id_client: { type: Schema.ObjectId, ref:"User" },
   salesId: { type: Schema.ObjectId, ref:"SalesMan" },
+  orderTrackId: { type: Schema.ObjectId, ref:"Delivery" },
 
 });
 

@@ -225,7 +225,6 @@ const removeChild = async (req, res) => {
 
 const updateStatusTemplateTrue = async (req, res) => {
     const { _id, status } = req.body;
-    console.log(_id)
     try {
       const updateTextMessage = await TextProcess.findOneAndUpdate(
         { _id },

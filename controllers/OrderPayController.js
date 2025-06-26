@@ -15,11 +15,9 @@ const getOrderPay = async (req, res) => {
       endDate.setHours(23, 59, 59, 999);
       let endUTC4 = new Date(endDate.getTime() - 4 * 60 * 60 * 1000);
       endUTC4.setDate(endUTC4.getDate() + 1);
-      console.log(startDate, endUTC4)
       if (startDate > endUTC4) {
         return res.status(400).json({ message: "startDate no puede ser mayor a endDate" });
       }
-
       pipeline.push(
         {
           $addFields: {
@@ -118,11 +116,8 @@ const getOrderPay = async (req, res) => {
   }
 };
 
-
-
 const getOrderPayBySales = async (req, res) => {
     try {
-      console.log(req.body)
       const page = req.body.page || 1;
       const limit = req.body.limit || 0;
   
@@ -255,6 +250,7 @@ const postOrderPay = async (req, res) => {
       id_client: mongoose.Types.ObjectId(req.body.id_client),
       sales_id: mongoose.Types.ObjectId(req.body.sales_id),
       id_owner: req.body.id_owner,
+      reviewer: req.body.reviewer
     });
 
     const savedOrderPay = await newOrderPay.save();
@@ -274,6 +270,7 @@ const postOrderPay = async (req, res) => {
     }
 
     res.status(200).send({
+      _id: savedOrderPay._id,
       saleImage: savedOrderPay.saleImage,
       total: savedOrderPay.total,
       note: savedOrderPay.note,
@@ -283,13 +280,13 @@ const postOrderPay = async (req, res) => {
       id_client: savedOrderPay.id_client,
       sales_id: savedOrderPay.sales_id,
       id_owner: savedOrderPay.id_owner,
+      reviewer: req.body.reviewer
     });
   } catch (e) {
     console.error("Error en postOrderPay:", e);
     res.status(500).send({ message: "Error al guardar la orden de pago" });
   }
 };
-
 const getOrderPayByCalendar = async (req, res) => {
   try {
     const page = req.body.page || 1;
@@ -402,11 +399,35 @@ const getOrderPayByCalendar = async (req, res) => {
     res.status(500).json({ message: "Error al obtener pagos" });
   }
 };
+const updateOrderPayStatus = async (req, res) => {
+  try {
+    const { _id, paymentStatus, reviewer } = req.body;
+    const updatedOrderPay = await OrderPay.findByIdAndUpdate(
+      _id,
+      {
+        paymentStatus,
+        reviewer,
+      },
+      { new: true }
+    );
+    if (!updatedOrderPay) {
+      return res.status(404).send({ message: "Orden de pago no encontrada" });
+    }
+    res.status(200).send({
+      message: "Estado de pago actualizado correctamente",
+      orderPay: updatedOrderPay,
+    });
+  } catch (error) {
+    console.error("Error al actualizar el estado de pago:", error);
+    res.status(500).send({ message: "Error del servidor" });
+  }
+};
 
 module.exports = {
     getOrderPay,
     postOrderPay,
     getOrderPayId,
     getOrderPayBySales,
-    getOrderPayByCalendar
+    getOrderPayByCalendar,
+    updateOrderPayStatus
 };

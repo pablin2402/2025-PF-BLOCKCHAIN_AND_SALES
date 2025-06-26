@@ -5,7 +5,6 @@ const Price = require("../models/Price");
 const getProductsById = async (req, res) => {
   try {
     let query = { id_user: String(req.body.id_user) };
-
     if (req.body.status === true) {
       query.status = req.body.status;
     }
@@ -18,7 +17,6 @@ const getProductsById = async (req, res) => {
       query.productName = { $regex: req.body.search.trim(), $options: "i" };
     }
     const total = await Product.countDocuments(query);
-    console.log(total);
 
     const products = await Product.find(query)
       .populate("categoryId")
@@ -94,7 +92,8 @@ const postProduct = (req, res) => {
       id_user : req.body.id_user,
       brand: req.body.brand,
       productId: req.body.productId,
-      status: true,    
+      status: true, 
+      numberofUnitsPerBox: req.body.numberofUnitsPerBox   
     });
     product.save((err,product) => {
       if (err) {
@@ -110,7 +109,8 @@ const postProduct = (req, res) => {
         id_user : product.id_user,
         brand: product.brand,
         status: product.status,
-        productId: product.productId
+        productId: product.productId,
+        numberofUnitsPerBox: product.numberofUnitsPerBox
       });
     });
   } catch (e) {

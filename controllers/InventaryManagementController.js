@@ -4,13 +4,11 @@ const fs = require("fs");
 const getListOfInventaryManagement = async (req, res) => {
   try {
     let query = { id_user: String(req.body.id_user) };
-    console.log(req.body.id_user)
     const inventory = await InventaryManagement.find(query)
       .populate("product_id")
       
       .skip((req.body.page - 1) * req.body.limit)
       .limit(Number(req.body.limit));
-    console.log(inventory)
     const totalItems = await InventaryManagement.countDocuments(query);
     res.json({
       totalPages: Math.ceil(totalItems / req.body.limit),
@@ -73,7 +71,6 @@ const postInventaryManagement = (req, res) => {
       });
     });
   } catch (e) {
-    console.log(e);
   }
 };
 

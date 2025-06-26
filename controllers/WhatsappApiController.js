@@ -16,11 +16,9 @@ client.on('qr', async (qr) => {
 });
 
 client.on('ready', () => {
-    console.log('Client is ready!');
 });
 
 client.initialize();
 
 server.listen(3000, () => {
-    console.log('Listening on port 3000');
 });

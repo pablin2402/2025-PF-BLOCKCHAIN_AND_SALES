@@ -1,6 +1,32 @@
 const SalesMan = require("../models/SalesMan");
 const mongoose = require("mongoose");
+const getSalesManList1 = async (req, res) => {
+  try {
+    const { ids } = req.body;
 
+    if (!Array.isArray(ids)) {
+      return res.status(400).json({ message: "Debe enviar un array de IDs" });
+    }
+
+    const objectIds = ids.map(id => {
+      try {
+        return new mongoose.Types.ObjectId(id);
+      } catch {
+        return null;
+      }
+    }).filter(Boolean);
+
+    const salesmen = await SalesMan.find(
+      { _id: { $in: objectIds } },
+      { fullName: 1, lastName: 1 }
+    );
+
+    res.json(salesmen);
+  } catch (error) {
+    console.error("Error buscando vendedores:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+};
 const postNewAccount = (req, res) => {
   try {
    const client = new SalesMan({
@@ -11,7 +37,7 @@ const postNewAccount = (req, res) => {
         id_owner: req.body.id_owner,
         phoneNumber: req.body.phoneNumber,
         client_location: req.body.client_location,
-        userId: req.body.userId
+        region: req.body.region
     });
     client.save((err,client) => {
       if (err) {
@@ -25,8 +51,8 @@ const postNewAccount = (req, res) => {
         role: client.role,
         id_owner: client.id_owner,
         phoneNumber: client.phoneNumber,
-        userId: client.userId,
-        client_location: client.client_location
+        client_location: client.client_location,
+        region: client.region
       });
     });
   } catch (e) {
@@ -89,6 +115,7 @@ module.exports = {
     postNewAccount,
     getSalesMan,
     getClientLocationById,
-    getSalesManById
+    getSalesManById,
+    getSalesManList1
 };
   
